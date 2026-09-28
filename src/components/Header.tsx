@@ -13,7 +13,7 @@ export function Header({ onSearch, searchQuery }: Props) {
     <header className="sticky top-0 z-40 border-b border-stone-200/80 bg-white/85 backdrop-blur-xl">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between gap-4">
-          <a href="#/shop" className="flex items-center gap-2.5 shrink-0">
+          <a href="#/" className="flex items-center gap-2.5 shrink-0" aria-label="Maven home">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-stone-900 text-white">
               <ShoppingBag className="h-5 w-5" />
             </div>
@@ -23,6 +23,7 @@ export function Header({ onSearch, searchQuery }: Props) {
           </a>
 
           <nav className="hidden lg:flex items-center gap-6 text-sm font-medium text-stone-600" aria-label="Main navigation">
+            <a href="#/" className="hover:text-stone-950 transition-colors">Home</a>
             <a href="#/shop" className="hover:text-stone-950 transition-colors">Shop</a>
             <a href="#/about" className="hover:text-stone-950 transition-colors">Our story</a>
             <a href="#/contact" className="hover:text-stone-950 transition-colors">Contact</a>

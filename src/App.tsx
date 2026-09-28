@@ -10,14 +10,17 @@ import { CartDrawer } from '@/components/CartDrawer';
 import { ProductDetailModal } from '@/components/ProductDetailModal';
 import { CheckoutModal } from '@/components/CheckoutModal';
 import { InfoPage, type InfoPageName } from '@/components/InfoPage';
+import { LandingPage } from '@/components/LandingPage';
 import { AlertCircle } from 'lucide-react';
 
 type SortOption = 'featured' | 'newest' | 'price-low' | 'price-high' | 'rating';
-type PageName = 'shop' | 'wishlist' | InfoPageName;
+type PageName = 'home' | 'shop' | 'wishlist' | InfoPageName;
 
 function pageFromHash(): PageName {
-  const page = window.location.hash.replace(/^#\/?/, '') as PageName;
-  return ['about', 'shipping', 'contact', 'privacy', 'wishlist'].includes(page) ? page : 'shop';
+  const hash = window.location.hash.replace(/^#\/?/, '');
+  if (!hash) return 'home';
+  const page = hash as PageName;
+  return ['home', 'shop', 'about', 'shipping', 'contact', 'privacy', 'wishlist'].includes(page) ? page : 'home';
 }
 
 function Shop() {
@@ -67,6 +70,22 @@ function Shop() {
       ? 'instant'
       : 'smooth';
     catalogRef.current?.scrollIntoView({ behavior });
+  };
+
+  const openShop = (category?: Category) => {
+    setActiveCategory(category ?? 'All');
+    if (page !== 'shop') {
+      window.location.hash = '#/shop';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    scrollToCatalog();
+  };
+
+  const scrollToHomeCategories = () => {
+    document.getElementById('home-categories')?.scrollIntoView({
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+    });
   };
 
   const filtered = products.filter((p) => {
@@ -119,7 +138,19 @@ function Shop() {
       <Header searchQuery={searchQuery} onSearch={setSearchQuery} />
 
       <div key={page} className="page-enter">
-        {page === 'shop' ? <Hero onShopNow={scrollToCatalog} /> : page === 'wishlist' ? null : <InfoPage page={page} />}
+        {page === 'home' && (
+          <LandingPage
+            products={products}
+            loading={loading}
+            error={error}
+            onRetry={fetchProducts}
+            onShop={openShop}
+            onSelectProduct={setSelectedProduct}
+            onExploreCategories={scrollToHomeCategories}
+          />
+        )}
+        {page === 'shop' && <Hero onShopNow={scrollToCatalog} />}
+        {page !== 'home' && page !== 'shop' && page !== 'wishlist' && <InfoPage page={page} />}
 
         {page === 'wishlist' && (
           <section className="mx-auto min-h-[50vh] max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
