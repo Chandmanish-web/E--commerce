@@ -47,29 +47,21 @@ export function CheckoutModal({ isOpen, onClose }: Props) {
     try {
       const orderItems = items.map((item) => ({
         product_id: item.product.id,
-        name: item.product.name,
-        price: item.product.price,
         quantity: item.quantity,
       }));
 
-      const { data, error: insertError } = await supabase
-        .from('orders')
-        .insert({
-          customer_name: form.name,
-          customer_email: form.email,
-          shipping_address: form.address,
-          city: form.city,
-          zip_code: form.zip,
-          total,
-          items: orderItems,
-          status: 'confirmed',
-        })
-        .select()
-        .single();
+      const { data: createdOrderId, error: insertError } = await supabase.rpc('place_guest_order', {
+        p_customer_name: form.name,
+        p_customer_email: form.email,
+        p_shipping_address: form.address,
+        p_city: form.city,
+        p_zip_code: form.zip,
+        p_items: orderItems,
+      });
 
       if (insertError) throw insertError;
 
-      setOrderId(data.id);
+      setOrderId(createdOrderId);
       clear();
       setStep('success');
     } catch (err) {
@@ -111,9 +103,9 @@ export function CheckoutModal({ isOpen, onClose }: Props) {
               <div className="flex h-20 w-20 items-center justify-center rounded-full bg-green-100 mb-6 animate-[scaleIn_0.3s_ease-out]">
                 <Check className="h-10 w-10 text-green-600" />
               </div>
-              <h2 className="text-2xl font-bold text-stone-900">Order Confirmed!</h2>
+              <h2 className="text-2xl font-bold text-stone-900">Order placed</h2>
               <p className="text-sm text-stone-500 mt-2 max-w-sm">
-                Thank you for your purchase. A confirmation email is on its way.
+                Your Cash on Delivery order has been recorded. Order confirmation emails are not configured yet, so keep your order number for reference.
               </p>
               <div className="mt-6 rounded-xl bg-stone-50 px-6 py-4 w-full">
                 <p className="text-xs text-stone-400 uppercase tracking-wide">Order Number</p>

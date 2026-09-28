@@ -1,4 +1,4 @@
-import { ShoppingBag, Search } from 'lucide-react';
+import { Heart, ShoppingBag, Search } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 
 type Props = {
@@ -7,7 +7,7 @@ type Props = {
 };
 
 export function Header({ onSearch, searchQuery }: Props) {
-  const { totalItems, openCart } = useCart();
+  const { totalItems, wishlist, openCart } = useCart();
 
   return (
     <header className="sticky top-0 z-40 border-b border-stone-200/80 bg-white/85 backdrop-blur-xl">
@@ -41,7 +41,19 @@ export function Header({ onSearch, searchQuery }: Props) {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <a
+              href="#/wishlist"
+              className="relative flex h-10 w-10 items-center justify-center rounded-full hover:bg-stone-100 transition-colors"
+              aria-label={`Wishlist${wishlist.length ? `, ${wishlist.length} items` : ''}`}
+            >
+              <Heart className="h-5 w-5 text-stone-700" />
+              {wishlist.length > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-600 px-1 text-xs font-bold text-white">
+                  {wishlist.length}
+                </span>
+              )}
+            </a>
             <button
               onClick={openCart}
               className="relative flex h-10 w-10 items-center justify-center rounded-full hover:bg-stone-100 transition-colors"

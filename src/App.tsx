@@ -10,18 +10,18 @@ import { CartDrawer } from '@/components/CartDrawer';
 import { ProductDetailModal } from '@/components/ProductDetailModal';
 import { CheckoutModal } from '@/components/CheckoutModal';
 import { InfoPage, type InfoPageName } from '@/components/InfoPage';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 
-type SortOption = 'featured' | 'price-low' | 'price-high' | 'rating';
-type PageName = 'shop' | InfoPageName;
+type SortOption = 'featured' | 'newest' | 'price-low' | 'price-high' | 'rating';
+type PageName = 'shop' | 'wishlist' | InfoPageName;
 
 function pageFromHash(): PageName {
   const page = window.location.hash.replace(/^#\/?/, '') as PageName;
-  return ['about', 'shipping', 'contact', 'privacy'].includes(page) ? page : 'shop';
+  return ['about', 'shipping', 'contact', 'privacy', 'wishlist'].includes(page) ? page : 'shop';
 }
 
 function Shop() {
-  const { closeCart } = useCart();
+  const { closeCart, wishlist } = useCart();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,6 +30,10 @@ function Shop() {
   const [activeCategory, setActiveCategory] = useState<Category>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('featured');
+  const [minPrice, setMinPrice] = useState(0);
+  const [maxPrice, setMaxPrice] = useState<number | null>(null);
+  const [minRating, setMinRating] = useState(0);
+  const [inStockOnly, setInStockOnly] = useState(false);
   const [page, setPage] = useState<PageName>(pageFromHash);
   const catalogRef = useRef<HTMLDivElement>(null);
 
@@ -70,11 +74,16 @@ function Shop() {
     const matchesSearch =
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.description.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
+    const matchesPrice = p.price >= minPrice && p.price <= (maxPrice ?? Number.POSITIVE_INFINITY);
+    const matchesRating = p.rating >= minRating;
+    const matchesStock = !inStockOnly || p.stock > 0;
+    return matchesCategory && matchesSearch && matchesPrice && matchesRating && matchesStock;
   });
 
   const sorted = [...filtered].sort((a, b) => {
     switch (sortBy) {
+      case 'newest':
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       case 'price-low':
         return a.price - b.price;
       case 'price-high':
@@ -87,6 +96,18 @@ function Shop() {
   });
 
   const featuredProducts = products.filter((p) => p.featured).slice(0, 4);
+  const catalogMaxPrice = Math.ceil(Math.max(0, ...products.map((product) => product.price)));
+  const hasFilters = activeCategory !== 'All' || searchQuery !== '' || minPrice > 0 || maxPrice !== null || minRating > 0 || inStockOnly;
+
+  const clearFilters = () => {
+    setActiveCategory('All');
+    setSearchQuery('');
+    setMinPrice(0);
+    setMaxPrice(null);
+    setMinRating(0);
+    setInStockOnly(false);
+    setSortBy('featured');
+  };
 
   const openCheckout = () => {
     closeCart();
@@ -98,7 +119,25 @@ function Shop() {
       <Header searchQuery={searchQuery} onSearch={setSearchQuery} />
 
       <div key={page} className="page-enter">
-        {page === 'shop' ? <Hero onShopNow={scrollToCatalog} /> : <InfoPage page={page} />}
+        {page === 'shop' ? <Hero onShopNow={scrollToCatalog} /> : page === 'wishlist' ? null : <InfoPage page={page} />}
+
+        {page === 'wishlist' && (
+          <section className="mx-auto min-h-[50vh] max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+            <p className="mb-2 text-sm font-semibold uppercase tracking-widest text-amber-700">Saved for later</p>
+            <h1 className="mb-8 text-3xl font-bold text-stone-950">Your wishlist</h1>
+            {wishlist.length === 0 ? (
+              <div className="border-y border-stone-200 py-16 text-center">
+                <p className="text-lg font-medium text-stone-900">Nothing saved just yet</p>
+                <p className="mt-2 text-sm text-stone-500">Tap the heart on a product to keep it here.</p>
+                <a href="#/shop" className="mt-6 inline-flex bg-stone-950 px-5 py-3 text-sm font-semibold text-white hover:bg-stone-700">Explore the shop</a>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-x-5 gap-y-10 lg:grid-cols-4 lg:gap-x-6">
+                {wishlist.map((product) => <ProductCard key={product.id} product={product} onSelect={setSelectedProduct} />)}
+              </div>
+            )}
+          </section>
+        )}
 
       {/* Featured Products */}
       {page === 'shop' && featuredProducts.length > 0 && !searchQuery && activeCategory === 'All' && (
@@ -158,10 +197,28 @@ function Shop() {
             ))}
           </div>
 
-          {/* Sort + Results */}
-          <div className="flex items-center justify-between gap-4">
-            <p className="text-sm text-stone-500">
+          <div className="mb-6 grid gap-3 rounded-xl bg-stone-50 p-4 sm:grid-cols-2 lg:grid-cols-4">
+            <label className="text-xs font-medium text-stone-600">Minimum price
+              <input type="number" min={0} max={catalogMaxPrice} value={minPrice} onChange={(event) => setMinPrice(Math.max(0, Number(event.target.value)))} className="mt-1.5 w-full border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 focus:border-stone-500 focus:outline-none focus:ring-2 focus:ring-stone-200" />
+            </label>
+            <label className="text-xs font-medium text-stone-600">Maximum price
+              <input type="number" min={minPrice} max={catalogMaxPrice || undefined} value={maxPrice ?? ''} placeholder={catalogMaxPrice ? String(catalogMaxPrice) : 'No limit'} onChange={(event) => setMaxPrice(event.target.value ? Math.max(minPrice, Number(event.target.value)) : null)} className="mt-1.5 w-full border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 focus:border-stone-500 focus:outline-none focus:ring-2 focus:ring-stone-200" />
+            </label>
+            <label className="text-xs font-medium text-stone-600">Minimum rating
+              <select value={minRating} onChange={(event) => setMinRating(Number(event.target.value))} className="mt-1.5 w-full border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 focus:border-stone-500 focus:outline-none focus:ring-2 focus:ring-stone-200">
+                <option value={0}>Any rating</option><option value={3}>3+ stars</option><option value={4}>4+ stars</option><option value={4.5}>4.5+ stars</option>
+              </select>
+            </label>
+            <label className="flex items-center gap-2 self-end pb-2 text-sm text-stone-700">
+              <input type="checkbox" checked={inStockOnly} onChange={(event) => setInStockOnly(event.target.checked)} className="h-4 w-4 accent-stone-900" />
+              In stock only
+            </label>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <p className="text-sm text-stone-500" aria-live="polite">
               {sorted.length} {sorted.length === 1 ? 'product' : 'products'}
+              {hasFilters && <button type="button" onClick={clearFilters} className="ml-3 font-medium text-stone-900 underline underline-offset-4">Clear filters</button>}
             </p>
             <select
               value={sortBy}
@@ -169,6 +226,7 @@ function Shop() {
               className="rounded-full border border-stone-200 bg-white px-4 py-2 text-sm text-stone-700 focus:border-stone-400 focus:outline-none cursor-pointer"
             >
               <option value="featured">Featured</option>
+              <option value="newest">Newest</option>
               <option value="price-low">Price: Low to High</option>
               <option value="price-high">Price: High to Low</option>
               <option value="rating">Top Rated</option>
@@ -177,9 +235,16 @@ function Shop() {
         </div>
 
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-32">
-            <Loader2 className="h-8 w-8 text-stone-300 animate-spin" />
-            <p className="text-sm text-stone-400 mt-4">Loading products...</p>
+          <div className="grid grid-cols-2 gap-x-5 gap-y-10 lg:grid-cols-4 lg:gap-x-6" role="status" aria-label="Loading products">
+            {Array.from({ length: 8 }, (_, index) => (
+              <div key={index} className="animate-pulse">
+                <div className="aspect-square rounded-xl bg-stone-100" />
+                <div className="mt-4 h-3 w-1/3 rounded bg-stone-100" />
+                <div className="mt-2 h-4 w-4/5 rounded bg-stone-100" />
+                <div className="mt-3 h-3 w-1/2 rounded bg-stone-100" />
+                <div className="mt-3 h-5 w-1/4 rounded bg-stone-100" />
+              </div>
+            ))}
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center py-32 text-center">

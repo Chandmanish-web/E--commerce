@@ -1,4 +1,4 @@
-import { Star, Plus } from 'lucide-react';
+import { Heart, Star, Plus } from 'lucide-react';
 import type { Product } from '@/lib/supabase';
 import { formatPrice } from '@/lib/format';
 import { useCart } from '@/context/CartContext';
@@ -9,27 +9,34 @@ type Props = {
 };
 
 export function ProductCard({ product, onSelect }: Props) {
-  const { addItem } = useCart();
+  const { addItem, toggleWishlist, isWishlisted } = useCart();
 
   return (
-    <div
-      className="group cursor-pointer"
-      onClick={() => onSelect(product)}
-    >
-      <div className="relative aspect-square overflow-hidden rounded-2xl bg-stone-100 mb-4">
-        <img
-          src={product.image_url}
-          alt={product.name}
-          loading="lazy"
-          className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-        />
+    <article className="group">
+      <div className="relative mb-4 aspect-square overflow-hidden rounded-xl bg-stone-100">
+        <button type="button" onClick={() => onSelect(product)} className="h-full w-full" aria-label={`View ${product.name}`}>
+          <img
+            src={product.image_url}
+            alt={product.name}
+            loading="lazy"
+            className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+          />
+        </button>
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            addItem(product);
-          }}
-          className="absolute bottom-3 right-3 flex h-11 w-11 items-center justify-center rounded-full bg-stone-900 text-white shadow-lg opacity-0 translate-y-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-y-0 hover:bg-stone-800"
-          aria-label={`Add ${product.name} to cart`}
+          type="button"
+          onClick={() => toggleWishlist(product)}
+          aria-label={isWishlisted(product.id) ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`}
+          aria-pressed={isWishlisted(product.id)}
+          className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-stone-700 shadow-sm transition-colors hover:text-rose-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-900"
+        >
+          <Heart className={`h-5 w-5 ${isWishlisted(product.id) ? 'fill-rose-600 text-rose-600' : ''}`} />
+        </button>
+        <button
+          type="button"
+          onClick={() => addItem(product)}
+          disabled={product.stock === 0}
+          className="absolute bottom-3 right-3 flex h-11 w-11 items-center justify-center rounded-full bg-stone-900 text-white shadow-lg transition-all duration-300 hover:bg-stone-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:bg-stone-400"
+          aria-label={product.stock > 0 ? `Add ${product.name} to cart` : `${product.name} is out of stock`}
         >
           <Plus className="h-5 w-5" />
         </button>
@@ -48,9 +55,9 @@ export function ProductCard({ product, onSelect }: Props) {
         <p className="text-xs font-medium uppercase tracking-wide text-stone-400">
           {product.category}
         </p>
-        <h3 className="font-medium text-stone-900 leading-snug group-hover:text-stone-600 transition-colors">
+        <button type="button" onClick={() => onSelect(product)} className="text-left font-medium leading-snug text-stone-900 transition-colors hover:text-stone-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-500">
           {product.name}
-        </h3>
+        </button>
         <div className="flex items-center gap-1.5">
           <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
           <span className="text-sm text-stone-500">
@@ -61,6 +68,6 @@ export function ProductCard({ product, onSelect }: Props) {
           {formatPrice(product.price)}
         </p>
       </div>
-    </div>
+    </article>
   );
 }
